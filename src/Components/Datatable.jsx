@@ -5,6 +5,8 @@ import PropTypes from 'prop-types';
 import Filter from './Filter';
 import Paginator from './Paginator';
 import PageContext from './PageContext';
+import DatatableHeader from './DtHeader';
+import DatatableItem from './TbItem';
 
 import '../styles/Datatable.css';
 
@@ -15,11 +17,9 @@ export default class Datatable extends Component {
 
   state = {
     currentPage: 1,
-    renderedItems: [...this.props.items],
-    defaultItems: [...this.props.items],
+    selectedItemsIds: [],
     isAllSelected: false,
     perPage: 5,
-    columns: { ...this.props.columnConfig },
     currentQuery: '',
     sortKey: '',
     sortOrder: 'asc',
@@ -29,72 +29,53 @@ export default class Datatable extends Component {
   editCache = '';
 
   getData() {
-    const { renderedItems } = this.state;
-    return renderedItems;
+    const { currentQuery, sortKey, sortOrder } = this.state;
+    const { items, columnConfig } = this.props;
+
+    return items
+      .filter(this._filterItemsCallback(currentQuery, columnConfig))
+      .sort(this._sortCallback(sortKey, sortOrder));
   }
 
   getSelected() {
-    const { renderedItems } = this.state;
-    return renderedItems.filter(item => item.selected);
+    const { selectedItemsIds } = this.state;
+    if (!selectedItemsIds) {
+      return null;
+    }
+
+    return this.getData().filter(item => selectedItemsIds.includes(item.id));
   }
 
   _selectAllItems = () => {
-    const { isAllSelected } = this.state;
-    let flag = true;
-    if (isAllSelected) {
-      flag = false;
-    }
-
-    this._setSelectedToEveryItem(flag);
-
-    this.setState({
-      isAllSelected: flag,
+    this.setState(({ isAllSelected }) => {
+      const renderedItems = this.getData();
+      const selectedItemsIds = isAllSelected ? [] : renderedItems.map(item => item.id);
+      return {
+        isAllSelected: !isAllSelected,
+        selectedItemsIds,
+      };
     });
-  }
-
-  _setSelectedToEveryItem = (flag) => {
-    const { renderedItems } = this.state;
-    renderedItems.forEach((item) => {
-      // eslint-disable-next-line no-param-reassign
-      item.selected = flag;
-    });
-  }
-
-  _setColumnClass = (key, notSortable) => {
-    const { sortKey, sortOrder } = this.state;
-    let className = '';
-    if (sortOrder && sortKey === key) {
-      className = sortOrder;
-    } else if (notSortable) {
-      className = 'unsorted';
-    }
-    return className;
   }
 
   _selectItem = (itemId) => {
-    const { renderedItems } = this.state;
-    const newItems = [...renderedItems];
+    const renderedItems = this.getData();
+    const { selectedItemsIds } = this.state;
+    // filter all ids except itemId
+    const newSelectedItemsIds = selectedItemsIds
+      .filter(id => id !== itemId);
 
-    const itemIndex = newItems.findIndex(item => item.id === itemId);
-    if (itemIndex >= 0) {
-      const isElemSelected = newItems[itemIndex].selected;
-      newItems[itemIndex].selected = !isElemSelected;
-
-      // check if all items are selected
-      let selectedAmount = 0;
-      let isAllSelected = false;
-      renderedItems.forEach((item) => {
-        if (item.selected) {
-          selectedAmount++;
-        }
-      });
-
-      if (renderedItems.length === selectedAmount) {
-        isAllSelected = true;
-      }
-
-      this.setState({ isAllSelected, renderedItems: newItems });
+    const prevSelectedAmount = selectedItemsIds.length;
+    // if itemId was not in selected list - include it
+    if (newSelectedItemsIds.length === prevSelectedAmount) {
+      newSelectedItemsIds.push(itemId);
     }
+
+    const isAllSelected = renderedItems.length === newSelectedItemsIds.length;
+
+    this.setState({
+      isAllSelected,
+      selectedItemsIds: newSelectedItemsIds,
+    });
   }
 
   _sortCallback = (sortBy, order) => {
@@ -136,40 +117,32 @@ export default class Datatable extends Component {
       }
 
       return {
-        renderedItems: prevState.renderedItems.sort(this._sortCallback(sortBy, order)),
         sortKey: sortBy,
         sortOrder: order,
       };
     });
   }
 
-  handleFilterChange = (query) => {
-    const { columns, defaultItems } = this.state;
-
-    const config = Object.entries(columns);
+  _filterItemsCallback = (query, config) => (item) => {
     const regexp = new RegExp(query, 'i');
+    // eslint-disable-next-line no-restricted-syntax
+    for (const entry of Object.entries(config)) {
+      const key = entry[0];
+      const colConfig = entry[1];
 
-    const filteredItems = defaultItems
-      .filter((item) => {
-        // eslint-disable-next-line no-restricted-syntax
-        for (const entry of config) {
-          const key = entry[0];
-          const colConfig = entry[1];
+      if (colConfig.isSearchable && regexp.test(item[key])) {
+        return true;
+      }
+    }
+    return false;
+  }
 
-          if (colConfig.isSearchable && regexp.test(item[key])) {
-            return true;
-          }
-        }
-        return false;
-      });
-
-    this._setSelectedToEveryItem(false);
-
+  handleFilterChange = (query) => {
     this.setState({
+      currentQuery: query,
       currentPage: 1,
       isAllSelected: false,
-      currentQuery: query,
-      renderedItems: filteredItems,
+      selectedItemsIds: [],
     });
   }
 
@@ -178,7 +151,10 @@ export default class Datatable extends Component {
   }
 
   handlePerPageChange = (perPage) => {
-    this.setState({ currentPage: 1, perPage });
+    this.setState({
+      perPage,
+      currentPage: 1,
+    });
   }
 
   cancelEdit = () => {
@@ -188,15 +164,14 @@ export default class Datatable extends Component {
 
   saveEdit = (itemId, col) => {
     this.setState((prevState) => {
-      const newRenderedItems = [...prevState.renderedItems];
-      const editableItemIndex = prevState.renderedItems.findIndex(el => el.id === itemId);
+      // const newRenderedItems = [...prevState.renderedItems];
+      // const editableItemIndex = prevState.renderedItems.findIndex(el => el.id === itemId);
 
-      newRenderedItems[editableItemIndex][col] = this.editCache;
-
+      // newRenderedItems[editableItemIndex][col] = this.editCache;
+      // куда сохранять данные???
       this.editCache = '';
       return {
         isEditing: false,
-        renderedItems: newRenderedItems,
       };
     });
   }
@@ -235,95 +210,64 @@ export default class Datatable extends Component {
     });
   }
 
-  _renderItem = (item) => {
-    const { columns, isEditing } = this.state;
-    return (
-      <tr key={item.id}>
-        <td>
-          <input
-            type="checkbox"
-            checked={item.selected || false}
-            onChange={() => this._selectItem(item.id)}
-          />
-        </td>
-        {Object.keys(columns).map((col, i) => {
-          let value = item[col];
-          if (isEditing.id === item.id && isEditing.col === col) {
-            value = isEditing.innerJSX;
-          }
-          return (
-          // eslint-disable-next-line react/no-array-index-key
-            <td key={i} onDoubleClick={() => this.editItem(item.id, col, item[col])}>
-              {value}
-            </td>
-          );
-        })}
-      </tr>
-    );
-  }
-
-  _renderHeader = () => {
-    const { isAllSelected, columns } = this.state;
-    return (
-      <thead>
-        <tr>
-          <th>
-            <input
-              type="checkbox"
-              checked={isAllSelected}
-              onChange={this._selectAllItems}
-            />
-          </th>
-          {Object.entries(columns).map(([key, config]) => (
-            <th
-              key={key}
-              className={this._setColumnClass(key, config.isSortable)}
-              onClick={() => this._sortItems(config.isSortable ? key : '')}
-            >
-              {config.title}
-            </th>
-          ))}
-        </tr>
-      </thead>
-    );
-  }
-
-  pagesCount = () => {
-    const { perPage, renderedItems } = this.state;
-
-    return Math.ceil(renderedItems.length / perPage);
-  }
-
   render() {
     const {
-      renderedItems,
+      selectedItemsIds,
       currentQuery,
       perPage,
       currentPage,
+      isAllSelected,
+      isEditing,
+      sortKey,
+      sortOrder,
     } = this.state;
+
+    const { columnConfig } = this.props;
+
+    const renderedItems = this.getData();
 
     const startIndex = (currentPage - 1) * perPage;
     const endIndex = startIndex + perPage;
+
     const visibleItems = renderedItems.slice(startIndex, endIndex);
+
+    const itemProps = {
+      selectedItemsIds,
+      isEditing,
+      columns: columnConfig,
+      onSelectItem: this._selectItem,
+      onEditItem: this.editItem,
+    };
+
+    const headerProps = {
+      columns: columnConfig,
+      isAllSelected,
+      onAllSelect: this._selectAllItems,
+      onSortItems: this._sortItems,
+      sortInfo: { sortKey, sortOrder },
+    };
+
+    const pagesCount = Math.ceil(renderedItems.length / perPage);
+
+    const context = {
+      onPageChange: this.handlePageChange,
+      onPerPageChange: this.handlePerPageChange,
+      perPage,
+      currentPage,
+      pagesCount,
+      totalItems: renderedItems.length,
+    };
 
     return (
       <>
         <Filter query={currentQuery} onChange={this.handleFilterChange} />
-        <PageContext.Provider value={{
-          onPageChange: this.handlePageChange,
-          onPerPageChange: this.handlePerPageChange,
-          perPage,
-          currentPage,
-          pagesCount: this.pagesCount(),
-          totalItems: renderedItems.length,
-        }}
-        >
+        <PageContext.Provider value={context}>
           <Paginator selector />
 
           <table className="tabledata">
-            {this._renderHeader()}
+            <DatatableHeader {...headerProps} />
             <tbody>
-              {visibleItems.map(item => this._renderItem(item))}
+              {visibleItems.map(item => <DatatableItem key={item.id} item={item} {...itemProps} />)}
             </tbody>
           </table>
 

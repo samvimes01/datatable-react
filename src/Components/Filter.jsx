@@ -5,18 +5,21 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import '../styles/Filter.css';
 
-// import debounce from 'lodash.debounce';
+import debounce from 'lodash.debounce';
 
-// const QUERY_CHANGE_DELAY = 600;
+const QUERY_CHANGE_DELAY = 600;
 
 const Filter = (props) => {
   const { query, onChange } = props;
+
+  const wrapper = debounce(onChange, QUERY_CHANGE_DELAY);
+
   return (
     <label className="filter">
       Search:
       <input
-        onChange={event => onChange(event.target.value)}
-        value={query}
+        onChange={event => wrapper(event.target.value)}
+        defaultValue={query}
       />
     </label>
   );
