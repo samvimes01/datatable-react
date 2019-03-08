@@ -1,5 +1,5 @@
-.app {
-  text-align: center;
+.app{
+  background-color: #eaffe2;
 }
 
 .app-logo {
@@ -17,15 +17,16 @@
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+  text-align: center;
 }
 
 .app-main {
-  background-color: #eaffe2;
+  width: 900px;
+  margin: 10px auto;
   min-height: 75vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  font-size: 24px;
+  font-size: 18px;
   color: #000;
 }
 

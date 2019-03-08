@@ -1,0 +1,11 @@
+.filter {
+  text-align: right;
+  margin: 0 0 -40px;
+}
+
+.filter input, .paginator select {
+  background:url(/img/border.svg);
+  border: none;
+  padding: 0px 2px;
+  height: 20px;
+}

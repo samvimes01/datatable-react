@@ -9,6 +9,7 @@
   "rules": {
     "linebreak-style": "off",
     "no-underscore-dangle": ["warn", { "allowAfterThis": true }],
-    "no-plusplus":"off"
+    "no-plusplus":"off",
+    "react/jsx-one-expression-per-line": ["warn", { "allow": "single-child" }]
   }
 }

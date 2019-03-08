@@ -1,6 +1,6 @@
-# -- paste project name -- 
+# Datatable component
 
-1. [Working version](--url to gh-pages, etc... --)
-2. [Pull request](-- url to github project pull request (or other git merge request) -- /pull/1/files)
+1. [Working version](https://samvimes01.github.io/datatable-react/)
+2. [Pull request](https://github.com/samvimes01/datatable-react/pull/1/files)
 
-## -- paste project description --
+## Datatable component, written with react
